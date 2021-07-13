@@ -31,73 +31,44 @@ void freeconsole()
 template <class T>
 struct TArray
 {
-public:
-    inline TArray()
-    {
-        Data = nullptr;
-    };
-
     inline T& operator[](int i)
     {
         return Data[i];
     };
 
-    inline int Count()
-    {
-        return count;
-    }
-
     inline const T& operator[](int i) const
     {
         return Data[i];
     };
-private:
+
     T* Data;
     int count;
     int max;
 };
 
-bool GetGName(int id, char* outname)
-{
-    DWORD_PTR modBase = (DWORD_PTR)GetModuleHandle(NULL);
-    DWORD_PTR GNames = *(DWORD_PTR*)(modBase + GNAMES);
-    if (!GNames)
-        return false;
-    DWORD_PTR chunk = *(DWORD_PTR*)(GNames + (id / 0x4000) * 8);
-    if (!chunk)
-        return false;
-    DWORD_PTR nameptr = *(DWORD_PTR*)(chunk + (8 * (id % 0x4000)));
-    if (!nameptr)
-        return false;
-
-    int str_len = 0;
-    while (true)
-    {
-        char c = *(char*)(nameptr + 0x10 + str_len);
-        if (c == 0x0)
-            break;
-        str_len++;
-        if (str_len > 150)
-            return false;
-    }
-    memcpy(outname, (LPVOID)(nameptr + 0x10), str_len);
-    return true;
-}
-
 struct aactor {
     char buf0[0x18]; // 0x0
     int id; //0x18
-    char buf1[0xd75];//0x1c
-    bool xray; // 0xd91
+    char buf1[0xCC4]; //0x1c
+    bool binvulnerable; // 0xCE0
+    char buf2[0x178]; // 0xCE1
+    bool xray_enabled; // 0xE59
 };
 
 
 struct Ulevel {
     char buf[0xa0];
-    TArray<aactor*> Entitylist;
+    TArray<aactor*> Entitylist; // 0xa0
+};
+
+struct ULocalPlayer;
+
+struct playercontroller {
+    aactor* AcknowledgedPawn;
 };
 
 struct Ugameinstance {
+    byte pad[0x10];
     TArray<ULocalPlayer*> LocalPlayers;
 };
 
@@ -116,7 +87,7 @@ struct UGameViewportClient {
 struct ULocalPlayer
 {
     char pad[0x30];
-    uintptr_t playercontroller;
+    playercontroller* playercontroller;
     char pad0[0x38];
     UGameViewportClient* ViewportClient;
 
@@ -137,6 +108,7 @@ void mainthread()
     auto pgworld = reinterpret_cast<uintptr_t*>(GWORLD + base);
     bool infammo = 0;
     bool xray = 0;
+    bool godmode = 0;
     coninit("console");
 
     while (true) {
@@ -146,41 +118,45 @@ void mainthread()
             infammo = !infammo;
             printf("infammo %i\n",  infammo);
             if (infammo) {
+            
+            } else {
+                
             }
         }
         if (GetAsyncKeyState(VK_F2) & 1) {
             xray = !xray;
             printf("xray %i\n", xray);
         }
+        if (GetAsyncKeyState(VK_F3) & 1) {
+            godmode = !godmode;
+            printf("godmode: %i", godmode);
+        }
         if (xray) {
-            printf("running xray, gworld : %p gnames : %p\n", pgworld, pgnames);
-            uintptr_t names = *pgnames;
-            Uworld* world = (Uworld*)pgworld;
-            if (!names || !world) {
-                printf("names or gworld were null\n");
+            Uworld* world = (Uworld*)*pgworld;
+            if (!world)
                 continue;
-            }
-            printf("world %p, names %x\n", world, names);
+            Ugameinstance* gameinstance = world->gameinstance;
+            if (!gameinstance)
+                continue;
+            ULocalPlayer* plocalplayer = gameinstance->LocalPlayers[0];
+            if (!plocalplayer)
+                continue;
+            auto plevel = world->m_pULevel;
 
-            Ulevel* plevel = world->m_pULevel; // plevel 
-            printf("%p", plevel);
-            if (!plevel) {
-                printf("plevel was null\n");
-                continue;
-            }
-            printf("entering entityloop, count %i\n", plevel->Entitylist.Count());
-            for (int i = 0; i < plevel->Entitylist.Count(); i++) {
+
+            for (int i = 0; i < plevel->Entitylist.count; i++) {
                 char name[150]{ 0 };
                 auto pactor = plevel->Entitylist[i];
-                if (GetGName(pactor->id, name)) {
-                    printf("[%i] %s\n", i, name);
-                    if (!strcmp(name, "BP_PavlovPawn_C")) {
-                        printf("player!\n");
-                        pactor->xray = 1;
-                    }
-                } else {
-                    printf("[%i] failed to get name\n", i);
+                if (IsBadReadPtr(pactor, 0x328)) {
                     continue;
+                }
+                if (pactor->id == 79867 /*BP_PavlovPawn_C*/) {
+                    if (pactor == plocalplayer->playercontroller->AcknowledgedPawn) {
+                        printf("localplayer %p", pactor);
+                        pactor->binvulnerable = 1;
+                        continue;
+                    }
+                    pactor->xray_enabled = 1;
                 }
             }
         }
