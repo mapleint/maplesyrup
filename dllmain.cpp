@@ -1,12 +1,13 @@
 #include <Windows.h>
 #include <iostream>
+#include <vector>
 
 HMODULE HMOD;
 
     constexpr uintptr_t GNAMES = 0x34F9798;
     constexpr uintptr_t GWORLD = 0x35E9B38;
     constexpr uintptr_t nop    = 0x027E850;
-
+    constexpr uintptr_t decax =  0x02900EC;
 
 void coninit(const char* title) 
 {
@@ -26,6 +27,27 @@ void freeconsole()
     fclose(static_cast<_iobuf*>(__acrt_iob_func(2)));
 
     FreeConsole();
+}
+
+bool GetGName(int id, char* outname, uintptr_t GNames)
+{
+    DWORD_PTR chunk = *(DWORD_PTR*)(GNames + (id / 0x4000) * 8);
+    if (!chunk)
+        return false;
+    DWORD_PTR nameptr = *(DWORD_PTR*)(chunk + (8 * (id % 0x4000)));
+    if (!nameptr)
+        return false;
+
+    int str_len = 0;
+    while (true)
+    {
+        char c = *(char*)(nameptr + 0x10 + str_len);
+        if (c == 0x0 || str_len > 32)
+            break;
+        str_len++;
+    }
+    memcpy(outname, (LPVOID)(nameptr + 0x10), str_len);
+    return true;
 }
 
 template <class T>
@@ -100,8 +122,43 @@ struct gun {
     byte firemode;
 };
 
-
+enum firemode : uint8_t 
+{
+    Semi = 0,
+    Automatic = 1,
+    Manual = 2,
+    Burst = 3,
+};
 bool shouldrun = true;
+
+namespace id {
+    int pawn;
+    int galil;
+    int at;
+    int tec9;
+}
+
+bool havematch(int a, std::vector<int> v, void(*func)(void*), void* ptr){
+    for (int i = 0; i < v.size(); i++)
+        if (v[i] == a) {
+            (*func)(ptr);
+            return true;
+        }
+    return false;
+}
+
+void xray(void* ptr) 
+{
+    aactor* pawn = (aactor*)ptr;
+    pawn->xray_enabled = 1;
+}
+
+void rapid_fire(void* ptr)
+{
+    gun* g = (gun*)ptr;
+    g->firemode = 1;
+    g->firerate = 0.01f;
+}
 
 void mainthread() 
 {
@@ -116,6 +173,27 @@ void mainthread()
     bool godmode = 0;
     coninit("console");
 
+    for (int i = 0; i < 140'000; i++) {
+        char buf[150]{ 0 };
+        GetGName(i, buf, *pgnames);
+        if (!strcmp(buf, "BP_PavlovPawn_C")) {
+            id::pawn = i;
+            printf("%s, %i\n", buf, i);
+        }
+        else if (!strcmp(buf, "Gun_Galil_C")) {
+            id::galil = i;
+            printf("%s, %i\n", buf, i);
+        }
+        else if (!strcmp(buf, "Gun_AntiTank_C")) {
+            id::at = i;
+            printf("%s, %i\n", buf, i);
+        }
+        else if (!strcmp(buf, "Gun_Cet9_C")) {
+            id::tec9 = i;
+            printf("%s, %i\n", buf, i);
+        }
+    }
+
     while (true) {
         Sleep(10); /* 90 hertz */
         
@@ -125,14 +203,22 @@ void mainthread()
             if (infammo) {
                 byte buffer[] = { 0x90, 0x90 , 0xC6, 0x04, 0x10, 0x01 };
                 WriteProcessMemory(GetCurrentProcess(), (LPVOID)(nop + base), buffer, sizeof(buffer), 0);
+                byte buffer0[] = { 0x90, 0x90 , 0x90};
+                WriteProcessMemory(GetCurrentProcess(), (LPVOID)(decax + base), buffer0, sizeof(buffer0), 0);
             } else {
                 byte buffer[] = { 0x74, 0x23 , 0xC6, 0x04, 0x10, 0x02 };
                 WriteProcessMemory(GetCurrentProcess(), (LPVOID)(nop + base), buffer, sizeof(buffer), 0);
+                byte buffer0[] = { 0x66, 0xFF, 0xC8 };
+                WriteProcessMemory(GetCurrentProcess(), (LPVOID)(decax + base), buffer0, sizeof(buffer0), 0);
             }
         }
         if (GetAsyncKeyState(VK_F2) & 1) {
             xray = !xray;
             printf("xray %i\n", xray);
+        }
+        if (GetAsyncKeyState(VK_F12) & 1) {
+            freeconsole();
+            FreeLibraryAndExitThread(HMOD, 0);
         }
         if (xray) {
             Uworld* world = (Uworld*)*pgworld;
@@ -142,36 +228,23 @@ void mainthread()
             if (!gameinstance)
                 continue;
             auto plevel = world->m_pULevel;
-            ULocalPlayer* localplayer = world->gameinstance->LocalPlayers[0];
-
+            //ULocalPlayer * localplayer = world->gameinstance->LocalPlayers[0];
 
             for (int i = 0; i < plevel->Entitylist.count; i++) {
                 auto pactor = plevel->Entitylist[i];
                 if (IsBadReadPtr(pactor, 0x328)) {
                     continue;
                 }
-                switch (pactor->id) {
-                case 79867: // bp_PavlovPawn_c
-                    printf("player: %p", pactor);
-                    if (pactor != localplayer->playercontroller->pawn) {
-                        pactor->xray_enabled = 1;
-                    } else {
-                            printf("localplayer");
-                    }
-                    break;
-                case 49174:
-                case 80159: /* galil */
-                case 109288:
-                    printf("galil: %p", pactor);
-                    gun* galil = (gun*)pactor;
-                    galil->firerate = 0.0184000000f;
-                    printf("%f : %i\n", galil->firerate, galil->firemode);
-                    break;
-
+                if (pactor->id == id::pawn) {
+                    pactor->xray_enabled = 1;
+                    continue;
                 }
+                if (havematch(pactor->id, { id::galil, id::at, id::tec9 }, &rapid_fire, pactor))
+                    continue;
             }
-        }   
-    }
+
+        }
+    }   
 }
 
 BOOL APIENTRY DllMain(HMODULE hmodule, DWORD  reason, LPVOID lpReserved)
