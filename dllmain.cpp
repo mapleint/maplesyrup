@@ -5,7 +5,7 @@ HMODULE HMOD;
 
     constexpr uintptr_t GNAMES = 0x34F9798;
     constexpr uintptr_t GWORLD = 0x35E9B38;
-    constexpr uintptr_t nop    = 0x02900EC;
+    constexpr uintptr_t nop    = 0x027E850;
 
 
 void coninit(const char* title) 
@@ -64,7 +64,8 @@ struct Ulevel {
 struct ULocalPlayer;
 
 struct playercontroller {
-    aactor* AcknowledgedPawn;
+    char buf[0x3b0]; // 358 or 3a8 or 3b0
+    aactor* pawn;
 };
 
 struct Ugameinstance {
@@ -93,7 +94,11 @@ struct ULocalPlayer
 
 };
 
-
+struct gun {
+    char buf[0x6AC];
+    float firerate;
+    byte firemode;
+};
 
 
 bool shouldrun = true;
@@ -118,18 +123,16 @@ void mainthread()
             infammo = !infammo;
             printf("infammo %i\n",  infammo);
             if (infammo) {
-            
+                byte buffer[] = { 0x90, 0x90 , 0xC6, 0x04, 0x10, 0x01 };
+                WriteProcessMemory(GetCurrentProcess(), (LPVOID)(nop + base), buffer, sizeof(buffer), 0);
             } else {
-                
+                byte buffer[] = { 0x74, 0x23 , 0xC6, 0x04, 0x10, 0x02 };
+                WriteProcessMemory(GetCurrentProcess(), (LPVOID)(nop + base), buffer, sizeof(buffer), 0);
             }
         }
         if (GetAsyncKeyState(VK_F2) & 1) {
             xray = !xray;
             printf("xray %i\n", xray);
-        }
-        if (GetAsyncKeyState(VK_F3) & 1) {
-            godmode = !godmode;
-            printf("godmode: %i", godmode);
         }
         if (xray) {
             Uworld* world = (Uworld*)*pgworld;
@@ -138,29 +141,36 @@ void mainthread()
             Ugameinstance* gameinstance = world->gameinstance;
             if (!gameinstance)
                 continue;
-            ULocalPlayer* plocalplayer = gameinstance->LocalPlayers[0];
-            if (!plocalplayer)
-                continue;
             auto plevel = world->m_pULevel;
+            ULocalPlayer* localplayer = world->gameinstance->LocalPlayers[0];
 
 
             for (int i = 0; i < plevel->Entitylist.count; i++) {
-                char name[150]{ 0 };
                 auto pactor = plevel->Entitylist[i];
                 if (IsBadReadPtr(pactor, 0x328)) {
                     continue;
                 }
-                if (pactor->id == 79867 /*BP_PavlovPawn_C*/) {
-                    if (pactor == plocalplayer->playercontroller->AcknowledgedPawn) {
-                        printf("localplayer %p", pactor);
-                        pactor->binvulnerable = 1;
-                        continue;
+                switch (pactor->id) {
+                case 79867: // bp_PavlovPawn_c
+                    printf("player: %p", pactor);
+                    if (pactor != localplayer->playercontroller->pawn) {
+                        pactor->xray_enabled = 1;
+                    } else {
+                            printf("localplayer");
                     }
-                    pactor->xray_enabled = 1;
+                    break;
+                case 49174:
+                case 80159: /* galil */
+                case 109288:
+                    printf("galil: %p", pactor);
+                    gun* galil = (gun*)pactor;
+                    galil->firerate = 0.0184000000f;
+                    printf("%f : %i\n", galil->firerate, galil->firemode);
+                    break;
+
                 }
             }
-        }
-       
+        }   
     }
 }
 
