@@ -124,6 +124,7 @@ struct gun {
     byte firemode;
     char buf2[0x67];
     float recoils[3];
+    // 0x09B0
 };
 
 enum firemode : uint8_t 
@@ -140,6 +141,7 @@ namespace id {
     int galil;
     int at;
     int tec9;
+    int pump;
 }
 
 bool havematch(int a, std::vector<int> v, void(*func)(void*), void* ptr){
@@ -162,6 +164,10 @@ void rapid_fire(void* ptr)
     gun* g = (gun*)ptr;
     g->firemode = 1;
     g->firerate = 0.01f;
+    g->recoil = 0.f;
+    g->recoils[0] = 0.f;
+    g->recoils[1] = 0.f;
+    g->recoils[2] = 0.f;
 }
 
 
@@ -188,10 +194,11 @@ void mainthread()
     for (int i = 0; i < 140'000; i++) {
         char buf[150]{ 0 };
         GetGName(i, buf, *pgnames);
-        assign("BP_PavlovPawn_C",   id::pawn)
-        assign("Gun_Galil_C",       id::galil)
-        assign("Gun_AntiTank_C",    id::at)
-        assign("Gun_Cet9_C",        id::tec9)
+        assign("BP_PavlovPawn_C", id::pawn)
+        assign("Gun_Galil_C", id::galil)
+        assign("Gun_AntiTank_C", id::at)
+        assign("Gun_Cet9_C", id::tec9)
+        assign("Gun_Shotgun_C", id::pump)
     }
 
     while (true) {
@@ -239,7 +246,7 @@ void mainthread()
                     pactor->xray_enabled = 1;
                     continue;
                 }
-                if (havematch(pactor->id, { id::galil, id::at, id::tec9 }, &rapid_fire, pactor))
+                if (havematch(pactor->id, { id::galil, id::at, id::tec9, id::pump}, &rapid_fire, pactor))
                     continue;
             }
 
