@@ -117,9 +117,13 @@ struct ULocalPlayer
 };
 
 struct gun {
-    char buf[0x6AC];
+    char buf0[0x5F4];
+    float recoil;
+    char buf1[0xB4];
     float firerate;
     byte firemode;
+    char buf2[0x67];
+    float recoils[3];
 };
 
 enum firemode : uint8_t 
@@ -160,6 +164,14 @@ void rapid_fire(void* ptr)
     g->firerate = 0.01f;
 }
 
+
+#define assign(x, y) \
+if (!strcmp(buf, x)) { \
+y = i; \
+printf("%s, %i\n", buf, i); \
+continue;\
+}
+
 void mainthread() 
 {
 
@@ -176,22 +188,10 @@ void mainthread()
     for (int i = 0; i < 140'000; i++) {
         char buf[150]{ 0 };
         GetGName(i, buf, *pgnames);
-        if (!strcmp(buf, "BP_PavlovPawn_C")) {
-            id::pawn = i;
-            printf("%s, %i\n", buf, i);
-        }
-        else if (!strcmp(buf, "Gun_Galil_C")) {
-            id::galil = i;
-            printf("%s, %i\n", buf, i);
-        }
-        else if (!strcmp(buf, "Gun_AntiTank_C")) {
-            id::at = i;
-            printf("%s, %i\n", buf, i);
-        }
-        else if (!strcmp(buf, "Gun_Cet9_C")) {
-            id::tec9 = i;
-            printf("%s, %i\n", buf, i);
-        }
+        assign("BP_PavlovPawn_C",   id::pawn)
+        assign("Gun_Galil_C",       id::galil)
+        assign("Gun_AntiTank_C",    id::at)
+        assign("Gun_Cet9_C",        id::tec9)
     }
 
     while (true) {
