@@ -1,15 +1,16 @@
 #include <Windows.h>
 #include <iostream>
 #include <vector>
+#include "includes/xorstr.hpp"
 
-
-#ifdef DEBUG
+constexpr int DBG = 1;
 #define log(x, ...) \
-printf(x, ...)
-#else
-#define log(x, ...) \
+printf(x, ##__VA_ARGS__)
 
-#endif 
+//constexpr int DBG = 0;
+//#define log(x, ...) \
+
+
 
 
 HMODULE HMOD;
@@ -22,7 +23,7 @@ constexpr uintptr_t decax =  0x02900EC;
 
 void coninit(const char* title) 
 {
-#ifdef DEBUG
+if constexpr(DBG) {
         AllocConsole();
 
         freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(0)), "conin$", "r", static_cast<_iobuf*>(__acrt_iob_func(0)));
@@ -31,21 +32,17 @@ void coninit(const char* title)
 
         SetConsoleTitleA(title);
     }
-#endif // DBG
 }
 
 void freeconsole() 
 {
-#ifdef DEBUG
+    if constexpr (DBG) {
+        fclose(static_cast<_iobuf*>(__acrt_iob_func(0)));
+        fclose(static_cast<_iobuf*>(__acrt_iob_func(1)));
+        fclose(static_cast<_iobuf*>(__acrt_iob_func(2)));
 
-
-    fclose(static_cast<_iobuf*>(__acrt_iob_func(0)));
-    fclose(static_cast<_iobuf*>(__acrt_iob_func(1)));
-    fclose(static_cast<_iobuf*>(__acrt_iob_func(2)));
-
-    FreeConsole();
-
-#endif // DBG
+        FreeConsole();
+    }
 }
 
 
@@ -242,11 +239,30 @@ void rapid_fire(void* ptr)
 }
 
 
-#define assign(x, y) \
-if (!strcmp(buf, x)) { \
-y = i; \
-log("%s, %i\n", buf, i); \
-continue;\
+#define assign(x, y) if (!strcmp(buf, x)) { y = i; log("%s, %i\n", buf, i); continue;}
+
+std::vector<int*> guns;
+
+std::vector<int*> handguns;
+std::vector<int*> sr;
+std::vector<int*> ar;
+std::vector<int*> shotguns;
+std::vector<int*> mgs;
+std::vector<int*> smgs;
+
+void initvectors()
+{
+    using namespace id;
+    sr = {&mosin, &springfield, &enfield, &at, &awp, &kar98, &autosniper, &scar, &g43, &garand, &svt40 };
+    guns.insert(guns.end(), sr.begin(), sr.end());
+    handguns = {&tec9, &m9, &glock, &m1911, &fiveseven, &de, &revolver, &luger, &tokarev, &webley};
+    guns.insert(guns.end(), handguns.begin(), handguns.end());
+    shotguns = { &pump, &sawedoff, &autoshotgun, &drumshotgun };
+    guns.insert(guns.end(), shotguns.begin(), shotguns.end());
+    mgs = {&kriss, &uzi, &mp5, &smg, &p90, &ar9, &ppsh, &pepe, &mp40, &thompson};
+    guns.insert(guns.end(), mgs.begin(), mgs.end());
+    smgs = {&lmga, &mg42, &dp27, &bren};
+    guns.insert(guns.end(), smgs.begin(), smgs.end());
 }
 
 void update_ids(uintptr_t* gnames) {
@@ -254,57 +270,73 @@ void update_ids(uintptr_t* gnames) {
         char buf[150]{ 0 };
         GetGName(i, buf, *gnames);
 
-        assign("BP_PavlovPawn_C", id::pawn)
-        assign("Gun_Galil_C", id::galil)
-        assign("Gun_AntiTank_C", id::at)
-        assign("Gun_Cet9_C", id::tec9)
-        assign("Gun_Shotgun_C", id::pump)
-        assign("Gun_M9_C", id::m9)
-        assign("Gun_1911_C", id::m1911)
-        assign("Gun_Glock_C", id::glock)
-        assign("Gun_57_C", id::fiveseven)
-        assign("Gun_DE_C", id::de)
-        assign("Gun_Revolver_C", id::revolver)
-        assign("Gun_Sawedoff_C", id::sawedoff)
-        assign("Gun_AutoShotgun_C", id::autoshotgun)
-        assign("Gun_DrumShotgun_C", id::drumshotgun)
-        assign("Gun_LMGA_C", id::lmga)
-        assign("Gun_Uzi_C", id::uzi)
-        assign("Gun_MP5_C", id::mp5)
-        assign("Gun_SMG_C", id::smg)
-        assign("Gun_Vanas_C", id::famas)
-        assign("Gun_P90_C", id::p90)
-        assign("Gun_Kar98_C", id::kar98)
-        assign("Gun_AK47_C", id::ak47)
-        assign("Gun_AK12_C", id::ak12)
-        assign("Gun_AK_C", id::ak)
-        assign("Gun_M4_C", id::m4)
-        assign("Gun_AUG_C", id::aug)
-        assign("Gun_AutoSniper_C", id::autosniper)
-        assign("Gun_AWP_C", id::awp)
-        assign("Gun_SCAR20_C", id::scar)
-        assign("Gun_AR9_C", id::ar9)
-        assign("Gun_Pepe_C", id::pepe)
-        assign("Gun_VSS_C", id::vss)
-        assign("Gun_Kriss_C", id::kriss)
-        assign("Gun_DP27_C", id::dp27)
-        assign("Gun_PPSH41_C", id::ppsh)
-        assign("Gun_MP40_C", id::mp40)
-        assign("Gun_G43_C", id::g43)
-        assign("Gun_M1Garand_C", id::garand)
-        assign("Gun_SVT40_C", id::svt40)
-        assign("Gun_Luger_C", id::luger)
-        assign("Gun_Tokarev_C", id::tokarev)
-        assign("Gun_Webley_C", id::webley)
-        assign("Gun_Bren_C", id::bren)
-        assign("Gun_BAR_C", id::bar)
-        assign("Gun_STG44_C", id::stg44)
-        assign("Gun_Mosin_C", id::mosin)
-        assign("Gun_Springfield_C", id::springfield)
-        assign("Gun_Thompson_C", id::thompson)
-        assign("Gun_MG42_C", id::mg42)
-        assign("Gun_LeeEnfield_C", id::enfield)
-        assign("Gun_FlarePistol_C", id::flaregun)
+        assign(xorstr("BP_PavlovPawn_C"), id::pawn)
+
+        /*sniper rifles*/
+        assign(xorstr("Gun_Mosin_C"), id::mosin)
+        assign(xorstr("Gun_Springfield_C"), id::springfield)
+        assign(xorstr("Gun_LeeEnfield_C"), id::enfield)
+        assign(xorstr("Gun_AntiTank_C"), id::at)
+        assign(xorstr("Gun_AWP_C"), id::awp)
+        assign(xorstr("Gun_Kar98_C"), id::kar98)
+        assign(xorstr("Gun_AutoSniper_C"), id::autosniper)
+        assign(xorstr("Gun_SCAR20_C"), id::scar)
+        assign(xorstr("Gun_G43_C"), id::g43)
+        assign(xorstr("Gun_M1Garand_C"), id::garand)
+        assign(xorstr("Gun_SVT40_C"), id::svt40)
+
+
+        /*handguns*/
+        assign(xorstr("Gun_Cet9_C"), id::tec9)
+        assign(xorstr("Gun_M9_C"), id::m9)
+        assign(xorstr("Gun_Glock_C"), id::glock)
+        assign(xorstr("Gun_1911_C"), id::m1911)
+        assign(xorstr("Gun_57_C"), id::fiveseven)
+        assign(xorstr("Gun_DE_C"), id::de)
+        assign(xorstr("Gun_Revolver_C"), id::revolver)
+        assign(xorstr("Gun_Luger_C"), id::luger)
+        assign(xorstr("Gun_Tokarev_C"), id::tokarev)
+        assign(xorstr("Gun_Webley_C"), id::webley)
+
+        /*shotguns*/
+        assign(xorstr("Gun_Shotgun_C"), id::pump)
+        assign(xorstr("Gun_Sawedoff_C"), id::sawedoff)
+        assign(xorstr("Gun_AutoShotgun_C"), id::autoshotgun)
+        assign(xorstr("Gun_DrumShotgun_C"), id::drumshotgun)
+
+        /*automatic rifles*/
+        assign(xorstr("Gun_Galil_C"), id::galil)
+        assign(xorstr("Gun_Vanas_C"), id::famas)
+        assign(xorstr("Gun_AK47_C"), id::ak47)
+        assign(xorstr("Gun_AK12_C"), id::ak12)
+        assign(xorstr("Gun_AK_C"), id::ak)
+        assign(xorstr("Gun_M4_C"), id::m4)
+        assign(xorstr("Gun_AUG_C"), id::aug)
+        assign(xorstr("Gun_VSS_C"), id::vss)
+        assign(xorstr("Gun_BAR_C"), id::bar)
+        assign(xorstr("Gun_STG44_C"), id::stg44)
+
+        /*smgs*/
+        assign(xorstr("Gun_Kriss_C"), id::kriss)
+        assign(xorstr("Gun_Uzi_C"), id::uzi)
+        assign(xorstr("Gun_MP5_C"), id::mp5)
+        assign(xorstr("Gun_SMG_C"), id::smg)
+        assign(xorstr("Gun_P90_C"), id::p90)
+        assign(xorstr("Gun_AR9_C"), id::ar9)
+        assign(xorstr("Gun_Pepe_C"), id::pepe)
+        assign(xorstr("Gun_PPSH41_C"), id::ppsh)
+        assign(xorstr("Gun_MP40_C"), id::mp40)
+        assign(xorstr("Gun_Thompson_C"), id::thompson)
+
+        /*mgs*/
+        assign(xorstr("Gun_LMGA_C"), id::lmga)
+        assign(xorstr("Gun_MG42_C"), id::mg42)
+        assign(xorstr("Gun_DP27_C"), id::dp27)
+        assign(xorstr("Gun_Bren_C"), id::bren)
+
+        /*misc*/
+        assign(xorstr("Gun_FlarePistol_C"), id::flaregun)
+
     }
 }
 
@@ -318,12 +350,13 @@ void mainthread()
     auto pgworld = reinterpret_cast<uintptr_t*>(GWORLD + base);
     bool infammo = 0;
     bool xray = 0;
-    bool godmode = 0;
+    bool rapidfire = 0;
     coninit("console");
 
+    initvectors();
     update_ids(pgnames);
 
-    while (true) {
+    while (shouldrun) {
         Sleep(10); /* 90 hertz */
         
         if (GetAsyncKeyState(VK_F1) & 1) {
@@ -345,11 +378,14 @@ void mainthread()
             xray = !xray;
             log("xray %i\n", xray);
         }
-        if (GetAsyncKeyState(VK_F12) & 1) {
-            freeconsole();
-            FreeLibraryAndExitThread(HMOD, 0);
+        if (GetAsyncKeyState(VK_F3) & 1) {
+            rapidfire = !rapidfire;
+            log("rapidfire %i\n", rapidfire);
         }
-        if (xray) {
+        if (GetAsyncKeyState(VK_F9) & 1) {
+            break;
+        }
+        if (xray || rapidfire) {
             Uworld* world = (Uworld*)*pgworld;
             if (!world)
                 continue;
@@ -357,7 +393,7 @@ void mainthread()
             if (!gameinstance)
                 continue;
             auto plevel = world->m_pULevel;
-            //ULocalPlayer * localplayer = world->gameinstance->LocalPlayers[0];
+
 
             for (int i = 0; i < plevel->Entitylist.count; i++) {
                 auto pactor = plevel->Entitylist[i];
@@ -365,11 +401,16 @@ void mainthread()
                     continue;
                 }
                 if (pactor->id == id::pawn) {
-                    pactor->xray_enabled = 1;
+                    if(xray)
+                        pactor->xray_enabled = 1;
                     continue;
                 }
-                if (havematch(pactor->id, {&id::galil, &id::at, &id::tec9, &id::pump}, &rapid_fire, pactor))
-                    continue;
+                if (rapidfire) {
+                    if (havematch(pactor->id, guns, &rapid_fire, pactor))
+                        continue;
+                }
+
+
             }
 
         }
