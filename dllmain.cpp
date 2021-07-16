@@ -188,6 +188,7 @@ namespace id {
     int pepe;
     int vss;
     int kriss;
+    int m16;
 
     int ppsh;
     int mp40;
@@ -263,8 +264,9 @@ void initvectors()
     guns.insert(guns.end(), mgs.begin(), mgs.end());
     smgs = {&lmga, &mg42, &dp27, &bren};
     guns.insert(guns.end(), smgs.begin(), smgs.end());
-    ar = { &galil, &famas, &ak47, &ak, &ak12, &m4, &aug, &vss, &bar, &stg44 };
+    ar = { &galil, &famas, &ak47, &ak, &ak12, &m4, &aug, &vss, &bar, &stg44, &m16};
     guns.insert(guns.end(), ar.begin(), ar.end());
+    guns.push_back(&flaregun);
 }
 
 void update_ids(uintptr_t* gnames) {
@@ -317,6 +319,7 @@ void update_ids(uintptr_t* gnames) {
         assign(xorstr("Gun_VSS_C"), id::vss)
         assign(xorstr("Gun_BAR_C"), id::bar)
         assign(xorstr("Gun_STG44_C"), id::stg44)
+        assign(xorstr("Gun_M16_C"), id::m16)
 
         /*smgs*/
         assign(xorstr("Gun_Kriss_C"), id::kriss)
