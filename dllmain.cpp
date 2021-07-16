@@ -2,32 +2,52 @@
 #include <iostream>
 #include <vector>
 
+
+#ifdef DEBUG
+#define log(x, ...) \
+printf(x, ...)
+#else
+#define log(x, ...) \
+
+#endif 
+
+
 HMODULE HMOD;
 
-    constexpr uintptr_t GNAMES = 0x34F9798;
-    constexpr uintptr_t GWORLD = 0x35E9B38;
-    constexpr uintptr_t nop    = 0x027E850;
-    constexpr uintptr_t decax =  0x02900EC;
+constexpr uintptr_t GNAMES = 0x34F9798;
+constexpr uintptr_t GWORLD = 0x35E9B38;
+
+constexpr uintptr_t nop    = 0x027E850;
+constexpr uintptr_t decax =  0x02900EC;
 
 void coninit(const char* title) 
 {
-    AllocConsole();
+#ifdef DEBUG
+        AllocConsole();
 
-    freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(0)), "conin$", "r", static_cast<_iobuf*>(__acrt_iob_func(0)));
-    freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(1)), "conout$", "w", static_cast<_iobuf*>(__acrt_iob_func(1)));
-    freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(2)), "conout$", "w", static_cast<_iobuf*>(__acrt_iob_func(2)));
+        freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(0)), "conin$", "r", static_cast<_iobuf*>(__acrt_iob_func(0)));
+        freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(1)), "conout$", "w", static_cast<_iobuf*>(__acrt_iob_func(1)));
+        freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(2)), "conout$", "w", static_cast<_iobuf*>(__acrt_iob_func(2)));
 
-    SetConsoleTitleA(title);
+        SetConsoleTitleA(title);
+    }
+#endif // DBG
 }
 
 void freeconsole() 
 {
+#ifdef DEBUG
+
+
     fclose(static_cast<_iobuf*>(__acrt_iob_func(0)));
     fclose(static_cast<_iobuf*>(__acrt_iob_func(1)));
     fclose(static_cast<_iobuf*>(__acrt_iob_func(2)));
 
     FreeConsole();
+
+#endif // DBG
 }
+
 
 bool GetGName(int id, char* outname, uintptr_t GNames)
 {
@@ -136,17 +156,68 @@ enum firemode : uint8_t
 };
 bool shouldrun = true;
 
-namespace id {
+namespace id { 
     int pawn;
+
     int galil;
     int at;
     int tec9;
     int pump;
+    int m9;
+    int m1911;
+    int glock;
+    int fiveseven;
+    int de;
+    int revolver;
+    int sawedoff;
+    int autoshotgun;
+    int drumshotgun;
+    int lmga;
+    int uzi;
+    int mp5;
+    int smg;
+    int famas;
+    int p90;
+    int kar98;
+    int ak47;
+    int ak12;
+    int ak;
+    int m4;
+    int aug;
+    int autosniper;
+    int awp;
+    int ar9;
+    int scar;
+    int pepe;
+    int vss;
+    int kriss;
+
+    int ppsh;
+    int mp40;
+    int g43;
+    int garand;
+    int svt40;
+    int luger;
+    int tokarev;
+    int webley;
+    int bren;
+    int bar;
+    int sten;
+    int stg44;
+    int mosin;
+    int springfield;
+    int thompson;
+    int mg42;
+    int enfield;
+    int dp27;
+
+    int flaregun;
 }
 
-bool havematch(int a, std::vector<int> v, void(*func)(void*), void* ptr){
+bool havematch(int a, std::vector<int*> v, void(*func)(void*), void* ptr)
+{
     for (int i = 0; i < v.size(); i++)
-        if (v[i] == a) {
+        if (*v[i] == a) {
             (*func)(ptr);
             return true;
         }
@@ -174,8 +245,67 @@ void rapid_fire(void* ptr)
 #define assign(x, y) \
 if (!strcmp(buf, x)) { \
 y = i; \
-printf("%s, %i\n", buf, i); \
+log("%s, %i\n", buf, i); \
 continue;\
+}
+
+void update_ids(uintptr_t* gnames) {
+    for (int i = 0; i < 140'000; i++) {
+        char buf[150]{ 0 };
+        GetGName(i, buf, *gnames);
+
+        assign("BP_PavlovPawn_C", id::pawn)
+        assign("Gun_Galil_C", id::galil)
+        assign("Gun_AntiTank_C", id::at)
+        assign("Gun_Cet9_C", id::tec9)
+        assign("Gun_Shotgun_C", id::pump)
+        assign("Gun_M9_C", id::m9)
+        assign("Gun_1911_C", id::m1911)
+        assign("Gun_Glock_C", id::glock)
+        assign("Gun_57_C", id::fiveseven)
+        assign("Gun_DE_C", id::de)
+        assign("Gun_Revolver_C", id::revolver)
+        assign("Gun_Sawedoff_C", id::sawedoff)
+        assign("Gun_AutoShotgun_C", id::autoshotgun)
+        assign("Gun_DrumShotgun_C", id::drumshotgun)
+        assign("Gun_LMGA_C", id::lmga)
+        assign("Gun_Uzi_C", id::uzi)
+        assign("Gun_MP5_C", id::mp5)
+        assign("Gun_SMG_C", id::smg)
+        assign("Gun_Vanas_C", id::famas)
+        assign("Gun_P90_C", id::p90)
+        assign("Gun_Kar98_C", id::kar98)
+        assign("Gun_AK47_C", id::ak47)
+        assign("Gun_AK12_C", id::ak12)
+        assign("Gun_AK_C", id::ak)
+        assign("Gun_M4_C", id::m4)
+        assign("Gun_AUG_C", id::aug)
+        assign("Gun_AutoSniper_C", id::autosniper)
+        assign("Gun_AWP_C", id::awp)
+        assign("Gun_SCAR20_C", id::scar)
+        assign("Gun_AR9_C", id::ar9)
+        assign("Gun_Pepe_C", id::pepe)
+        assign("Gun_VSS_C", id::vss)
+        assign("Gun_Kriss_C", id::kriss)
+        assign("Gun_DP27_C", id::dp27)
+        assign("Gun_PPSH41_C", id::ppsh)
+        assign("Gun_MP40_C", id::mp40)
+        assign("Gun_G43_C", id::g43)
+        assign("Gun_M1Garand_C", id::garand)
+        assign("Gun_SVT40_C", id::svt40)
+        assign("Gun_Luger_C", id::luger)
+        assign("Gun_Tokarev_C", id::tokarev)
+        assign("Gun_Webley_C", id::webley)
+        assign("Gun_Bren_C", id::bren)
+        assign("Gun_BAR_C", id::bar)
+        assign("Gun_STG44_C", id::stg44)
+        assign("Gun_Mosin_C", id::mosin)
+        assign("Gun_Springfield_C", id::springfield)
+        assign("Gun_Thompson_C", id::thompson)
+        assign("Gun_MG42_C", id::mg42)
+        assign("Gun_LeeEnfield_C", id::enfield)
+        assign("Gun_FlarePistol_C", id::flaregun)
+    }
 }
 
 void mainthread() 
@@ -191,22 +321,14 @@ void mainthread()
     bool godmode = 0;
     coninit("console");
 
-    for (int i = 0; i < 140'000; i++) {
-        char buf[150]{ 0 };
-        GetGName(i, buf, *pgnames);
-        assign("BP_PavlovPawn_C", id::pawn)
-        assign("Gun_Galil_C", id::galil)
-        assign("Gun_AntiTank_C", id::at)
-        assign("Gun_Cet9_C", id::tec9)
-        assign("Gun_Shotgun_C", id::pump)
-    }
+    update_ids(pgnames);
 
     while (true) {
         Sleep(10); /* 90 hertz */
         
         if (GetAsyncKeyState(VK_F1) & 1) {
             infammo = !infammo;
-            printf("infammo %i\n",  infammo);
+            log("infammo %i\n",  infammo);
             if (infammo) {
                 byte buffer[] = { 0x90, 0x90 , 0xC6, 0x04, 0x10, 0x01 };
                 WriteProcessMemory(GetCurrentProcess(), (LPVOID)(nop + base), buffer, sizeof(buffer), 0);
@@ -221,7 +343,7 @@ void mainthread()
         }
         if (GetAsyncKeyState(VK_F2) & 1) {
             xray = !xray;
-            printf("xray %i\n", xray);
+            log("xray %i\n", xray);
         }
         if (GetAsyncKeyState(VK_F12) & 1) {
             freeconsole();
@@ -246,7 +368,7 @@ void mainthread()
                     pactor->xray_enabled = 1;
                     continue;
                 }
-                if (havematch(pactor->id, { id::galil, id::at, id::tec9, id::pump}, &rapid_fire, pactor))
+                if (havematch(pactor->id, {&id::galil, &id::at, &id::tec9, &id::pump}, &rapid_fire, pactor))
                     continue;
             }
 
@@ -258,9 +380,13 @@ BOOL APIENTRY DllMain(HMODULE hmodule, DWORD  reason, LPVOID lpReserved)
 {
     HMOD = hmodule;
     if (reason == DLL_PROCESS_ATTACH) {
-        HANDLE status = CreateThread(nullptr, NULL, (LPTHREAD_START_ROUTINE)mainthread, hmodule, NULL, nullptr);
+        HANDLE status = CreateThread(nullptr, NULL,
+            (LPTHREAD_START_ROUTINE)mainthread, hmodule, NULL, nullptr);
+
         if (status)
             CloseHandle(status);
+    } else {
+        shouldrun = false;
     }
     return TRUE;
 }
