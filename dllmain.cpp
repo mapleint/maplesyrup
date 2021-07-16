@@ -263,6 +263,8 @@ void initvectors()
     guns.insert(guns.end(), mgs.begin(), mgs.end());
     smgs = {&lmga, &mg42, &dp27, &bren};
     guns.insert(guns.end(), smgs.begin(), smgs.end());
+    ar = { &galil, &famas, &ak47, &ak, &ak12, &m4, &aug, &vss, &bar, &stg44 };
+    guns.insert(guns.end(), ar.begin(), ar.end());
 }
 
 void update_ids(uintptr_t* gnames) {
@@ -414,7 +416,9 @@ void mainthread()
             }
 
         }
-    }   
+    }
+    freeconsole();
+    FreeLibraryAndExitThread(HMOD, 0);
 }
 
 BOOL APIENTRY DllMain(HMODULE hmodule, DWORD  reason, LPVOID lpReserved)
@@ -427,7 +431,7 @@ BOOL APIENTRY DllMain(HMODULE hmodule, DWORD  reason, LPVOID lpReserved)
         if (status)
             CloseHandle(status);
     } else {
-        shouldrun = false;
+
     }
     return TRUE;
 }
