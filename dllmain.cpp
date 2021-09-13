@@ -2,33 +2,36 @@
 #include <iostream>
 #include <vector>
 #include "includes/xorstr.hpp"
+#include "structs.h"
 
 constexpr int DBG = 1;
 #define log(x, ...) \
-printf(x, ##__VA_ARGS__)
+printf(xorstr(x), ##__VA_ARGS__)
 
 //constexpr int DBG = 0;
 //#define log(x, ...) \
 
-
-
+/* GLOBALS*/
 
 HMODULE HMOD;
 
-constexpr uintptr_t GNAMES = 0x34F9798;
-constexpr uintptr_t GWORLD = 0x35E9B38;
+constexpr uintptr_t GNAMES  = 0x34F9798;
+constexpr uintptr_t GWORLD  = 0x35E9B38;
+constexpr uintptr_t GOBJECT = 0x34FDD10;
 
 constexpr uintptr_t nop    = 0x027E850;
 constexpr uintptr_t decax =  0x02900EC;
+
+
 
 void coninit(const char* title) 
 {
 if constexpr(DBG) {
         AllocConsole();
 
-        freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(0)), "conin$", "r", static_cast<_iobuf*>(__acrt_iob_func(0)));
-        freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(1)), "conout$", "w", static_cast<_iobuf*>(__acrt_iob_func(1)));
-        freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(2)), "conout$", "w", static_cast<_iobuf*>(__acrt_iob_func(2)));
+        freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(0)), xorstr("conin$" ), xorstr("r"), static_cast<_iobuf*>(__acrt_iob_func(0)));
+        freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(1)), xorstr("conout$"), xorstr("w"), static_cast<_iobuf*>(__acrt_iob_func(1)));
+        freopen_s(reinterpret_cast<_iobuf**>(__acrt_iob_func(2)), xorstr("conout$"), xorstr("w"), static_cast<_iobuf*>(__acrt_iob_func(2)));
 
         SetConsoleTitleA(title);
     }
@@ -67,91 +70,6 @@ bool GetGName(int id, char* outname, uintptr_t GNames)
     return true;
 }
 
-template <class T>
-struct TArray
-{
-    inline T& operator[](int i)
-    {
-        return Data[i];
-    };
-
-    inline const T& operator[](int i) const
-    {
-        return Data[i];
-    };
-
-    T* Data;
-    int count;
-    int max;
-};
-
-struct aactor {
-    char buf0[0x18]; // 0x0
-    int id; //0x18
-    char buf1[0xCC4]; //0x1c
-    bool binvulnerable; // 0xCE0
-    char buf2[0x178]; // 0xCE1
-    bool xray_enabled; // 0xE59
-};
-
-
-struct Ulevel {
-    char buf[0xa0];
-    TArray<aactor*> Entitylist; // 0xa0
-};
-
-struct ULocalPlayer;
-
-struct playercontroller {
-    char buf[0x3b0]; // 358 or 3a8 or 3b0
-    aactor* pawn;
-};
-
-struct Ugameinstance {
-    byte pad[0x10];
-    TArray<ULocalPlayer*> LocalPlayers;
-};
-
-struct Uworld {
-    char __pad0x30[0x30];
-    Ulevel* m_pULevel;
-    char __pad0x108[0x158];
-    Ugameinstance* gameinstance;
-};
-
-struct UGameViewportClient {
-    char pad[0x78];
-    Uworld* world;
-};
-
-struct ULocalPlayer
-{
-    char pad[0x30];
-    playercontroller* playercontroller;
-    char pad0[0x38];
-    UGameViewportClient* ViewportClient;
-
-};
-
-struct gun {
-    char buf0[0x5F4];
-    float recoil;
-    char buf1[0xB4];
-    float firerate;
-    byte firemode;
-    char buf2[0x67];
-    float recoils[3];
-    // 0x09B0
-};
-
-enum firemode : uint8_t 
-{
-    Semi = 0,
-    Automatic = 1,
-    Manual = 2,
-    Burst = 3,
-};
-bool shouldrun = true;
 
 namespace id { 
     int pawn;
@@ -210,7 +128,11 @@ namespace id {
     int dp27;
 
     int flaregun;
+
+    int rpg;
 }
+
+
 
 bool havematch(int a, std::vector<int*> v, void(*func)(void*), void* ptr)
 {
@@ -226,19 +148,43 @@ void xray(void* ptr)
 {
     aactor* pawn = (aactor*)ptr;
     pawn->xray_enabled = 1;
+   
 }
+
+float speed = 2.f;
+
+bool norecoil = 0;
+
+bool rapidfire = 0;
+
+bool muteguns = 0;
+
+
 
 void rapid_fire(void* ptr)
 {
     gun* g = (gun*)ptr;
-    g->firemode = 1;
-    g->firerate = 0.01f;
-    g->recoil = 0.f;
-    g->recoils[0] = 0.f;
-    g->recoils[1] = 0.f;
-    g->recoils[2] = 0.f;
+
+    g->ADSSpeedMultiplier = speed;
+    g->RecoilTraslationMul = norecoil ? 0 : g->RecoilTraslationMul;
+    g->RecoilMul = norecoil ? 0 : g->RecoilMul;
+    g->RecoilAngleMul = norecoil ? 0 : g->RecoilAngleMul;
+
+    g->FireMode = rapidfire ? firemode::Automatic : g->FireMode;
+
+    if (id::webley != ((aactor*)g)->id && id::revolver != ((aactor*)g)->id)
+        g->ShotSound = g->TriggerSound;
+
+    g->FireRate = rapidfire ? 0.01f : 0.07f;
+    g->PicatinnyLength = 10000.f;
+    g->SightCompatibility = 0xf;
+    
+
 }
 
+void bull(void *ptr)
+{
+}
 
 #define assign(x, y) if (!strcmp(buf, x)) { y = i; log("%s, %i\n", buf, i); continue;}
 
@@ -266,6 +212,7 @@ void initvectors()
     guns.insert(guns.end(), smgs.begin(), smgs.end());
     ar = { &galil, &famas, &ak47, &ak, &ak12, &m4, &aug, &vss, &bar, &stg44, &m16};
     guns.insert(guns.end(), ar.begin(), ar.end());
+
     guns.push_back(&flaregun);
 }
 
@@ -275,7 +222,6 @@ void update_ids(uintptr_t* gnames) {
         GetGName(i, buf, *gnames);
 
         assign(xorstr("BP_PavlovPawn_C"), id::pawn)
-
         /*sniper rifles*/
         assign(xorstr("Gun_Mosin_C"), id::mosin)
         assign(xorstr("Gun_Springfield_C"), id::springfield)
@@ -288,8 +234,6 @@ void update_ids(uintptr_t* gnames) {
         assign(xorstr("Gun_G43_C"), id::g43)
         assign(xorstr("Gun_M1Garand_C"), id::garand)
         assign(xorstr("Gun_SVT40_C"), id::svt40)
-
-
         /*handguns*/
         assign(xorstr("Gun_Cet9_C"), id::tec9)
         assign(xorstr("Gun_M9_C"), id::m9)
@@ -301,13 +245,11 @@ void update_ids(uintptr_t* gnames) {
         assign(xorstr("Gun_Luger_C"), id::luger)
         assign(xorstr("Gun_Tokarev_C"), id::tokarev)
         assign(xorstr("Gun_Webley_C"), id::webley)
-
         /*shotguns*/
         assign(xorstr("Gun_Shotgun_C"), id::pump)
         assign(xorstr("Gun_Sawedoff_C"), id::sawedoff)
         assign(xorstr("Gun_AutoShotgun_C"), id::autoshotgun)
         assign(xorstr("Gun_DrumShotgun_C"), id::drumshotgun)
-
         /*automatic rifles*/
         assign(xorstr("Gun_Galil_C"), id::galil)
         assign(xorstr("Gun_Vanas_C"), id::famas)
@@ -320,7 +262,6 @@ void update_ids(uintptr_t* gnames) {
         assign(xorstr("Gun_BAR_C"), id::bar)
         assign(xorstr("Gun_STG44_C"), id::stg44)
         assign(xorstr("Gun_M16_C"), id::m16)
-
         /*smgs*/
         assign(xorstr("Gun_Kriss_C"), id::kriss)
         assign(xorstr("Gun_Uzi_C"), id::uzi)
@@ -332,18 +273,18 @@ void update_ids(uintptr_t* gnames) {
         assign(xorstr("Gun_PPSH41_C"), id::ppsh)
         assign(xorstr("Gun_MP40_C"), id::mp40)
         assign(xorstr("Gun_Thompson_C"), id::thompson)
-
+        assign(xorstr("Gun_Sten_C"), id::sten)
         /*mgs*/
         assign(xorstr("Gun_LMGA_C"), id::lmga)
         assign(xorstr("Gun_MG42_C"), id::mg42)
         assign(xorstr("Gun_DP27_C"), id::dp27)
         assign(xorstr("Gun_Bren_C"), id::bren)
-
         /*misc*/
         assign(xorstr("Gun_FlarePistol_C"), id::flaregun)
-
+        assign(xorstr("RL_RPG7_C"), id::rpg)
     }
 }
+
 
 void mainthread() 
 {
@@ -355,13 +296,14 @@ void mainthread()
     auto pgworld = reinterpret_cast<uintptr_t*>(GWORLD + base);
     bool infammo = 0;
     bool xray = 0;
-    bool rapidfire = 0;
-    coninit("console");
+    coninit(xorstr("console"));
 
     initvectors();
     update_ids(pgnames);
 
     while (shouldrun) {
+
+            
         Sleep(10); /* 90 hertz */
         
         if (GetAsyncKeyState(VK_F1) & 1) {
@@ -370,7 +312,7 @@ void mainthread()
             if (infammo) {
                 byte buffer[] = { 0x90, 0x90 , 0xC6, 0x04, 0x10, 0x01 };
                 WriteProcessMemory(GetCurrentProcess(), (LPVOID)(nop + base), buffer, sizeof(buffer), 0);
-                byte buffer0[] = { 0x90, 0x90 , 0x90};
+                byte buffer0[] = {0x90, 0x90, 0x90};
                 WriteProcessMemory(GetCurrentProcess(), (LPVOID)(decax + base), buffer0, sizeof(buffer0), 0);
             } else {
                 byte buffer[] = { 0x74, 0x23 , 0xC6, 0x04, 0x10, 0x02 };
@@ -387,36 +329,73 @@ void mainthread()
             rapidfire = !rapidfire;
             log("rapidfire %i\n", rapidfire);
         }
+
+        if (GetAsyncKeyState(VK_F4) & 1) {
+            norecoil = !norecoil;
+            log("norecoil %i\n", norecoil);
+        }
+
         if (GetAsyncKeyState(VK_F9) & 1) {
             break;
         }
-        if (xray || rapidfire) {
-            Uworld* world = (Uworld*)*pgworld;
-            if (!world)
+
+        if(GetAsyncKeyState(VK_UP) & 1) {
+            speed += .1f;
+            log("speed : %f\n", speed);
+        }
+
+        if (GetAsyncKeyState(VK_DOWN) & 1) {
+            speed -= .1f;
+            log("speed : %f\n", speed);
+        }
+        if (GetAsyncKeyState(VK_LEFT) & 1) {
+            speed -= 10.f;
+            log("speed : %f\n", speed);
+        }
+
+        if (GetAsyncKeyState(VK_RIGHT) & 1) {
+            speed += 10.f;
+            log("speed : %f\n", speed);
+        }
+
+        if (GetAsyncKeyState(VK_PRIOR) & 1) {
+            speed *= 0.1f;
+            log("speed : %f\n", speed);
+        }
+
+        if (GetAsyncKeyState(VK_NEXT) & 1) {
+            speed *= 10.f;
+            log("speed : %f\n", speed);
+        }
+
+        Uworld* world = (Uworld*)*pgworld;
+        if (!world)
+            continue;
+        Ugameinstance* gameinstance = world->gameinstance;
+
+        if (!gameinstance)
+            continue;
+        auto plevel = world->m_pULevel;
+
+        
+        for (int i = 0; i < plevel->Entitylist.count; i++) {
+
+            auto pactor = plevel->Entitylist[i];
+
+
+
+            if (IsBadReadPtr(pactor, 0x328))
                 continue;
-            Ugameinstance* gameinstance = world->gameinstance;
-            if (!gameinstance)
+
+            if (pactor->id == id::pawn) {
+                if(xray)
+                    pactor->xray_enabled = 1;
                 continue;
-            auto plevel = world->m_pULevel;
-
-
-            for (int i = 0; i < plevel->Entitylist.count; i++) {
-                auto pactor = plevel->Entitylist[i];
-                if (IsBadReadPtr(pactor, 0x328)) {
-                    continue;
-                }
-                if (pactor->id == id::pawn) {
-                    if(xray)
-                        pactor->xray_enabled = 1;
-                    continue;
-                }
-                if (rapidfire) {
-                    if (havematch(pactor->id, guns, &rapid_fire, pactor))
-                        continue;
-                }
-
-
             }
+
+            if (havematch(pactor->id, guns, &rapid_fire, pactor))
+                continue;
+
 
         }
     }
